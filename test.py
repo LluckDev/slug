@@ -8,6 +8,8 @@ import shutil
 import numpy as np
 import sounddevice as sd
 
+import randomShi
+
 usage_line = " press <enter> to quit, +<enter> or -<enter> to change scaling "
 
 
@@ -75,8 +77,7 @@ low, high = args.range
 if high <= low:
     parser.error("HIGH must be greater than LOW")
 
-# Create a nice output gradient using ANSI escape sequences.
-# Stolen from https://gist.github.com/maurisvh/df919538bcef391bc89f
+
 colors = 30, 34, 35, 91, 93, 97
 chars = " :%#\t#%:"
 gradient = []
@@ -87,27 +88,73 @@ for bg, fg in zip(colors, colors[1:]):
         else:
             gradient.append(f"\x1b[{fg};{bg + 10}m{char}")
 
+
+samplerate = sd.query_devices(args.device, "input")["default_samplerate"]
+
+last = np.zeros(1811)
+
+bins = np.array(
+    [
+        440.0,
+        466.1637615180899,
+        493.8833012561241,
+        523.2511306011972,
+        554.3652619537442,
+        587.3295358348151,
+        622.2539674441618,
+        659.2551138257398,
+        698.4564628660078,
+        739.9888454232688,
+        783.9908719634985,
+        830.6093951598903,
+    ]
+)
+
+names = [
+    "A",
+    "Bb",
+    "B",
+    "C",
+    "C#",
+    "D",
+    "Db",
+    "E",
+    "Eb",
+    "E",
+    "F",
+    "F#",
+    "G",
+    "G#",
+]
+
+
 try:
-    samplerate = sd.query_devices(args.device, "input")["default_samplerate"]
+
+    def callback(indata, frames, time, status):
+        if status:
+            print(status)
+        if any(indata):
+            magnitude = np.abs(np.fft.rfft(indata[:, 0], n=fftsize))
+            magnitudes = np.abs(magnitude)
+            frequencies = np.fft.rfftfreq(fftsize, d=1 / samplerate)
+
+            # maxofM = magnitude.index(max(magnitudes))
+            # maxofM = np.where(magnitude == max(magnitudes))
+            maxofM1 = randomShi.get_index(max(magnitudes), magnitude)
+            maxofM = frequencies[int(maxofM1[0][0])]
+
+            a = randomShi.findClosest(maxofM, bins)
+
+            print(names[int(np.where(bins == a)[0][0])])
+
+            # print(set, names[int(set.index(max(set)) / 5)])
+
+            # aMask = (frequencies >= 435) & (frequencies <= 445)
+            # print(np.mean(magnitudes[aMask]))
 
     delta_f = (high - low) / (args.columns - 1)
     fftsize = math.ceil(samplerate / delta_f)
     low_bin = math.floor(low / delta_f)
-
-    def callback(indata, frames, time, status):
-        if status:
-            text = " " + str(status) + " "
-            print("\x1b[34;40m", text.center(args.columns, "#"), "\x1b[0m", sep="")
-        if any(indata):
-            magnitude = np.abs(np.fft.rfft(indata[:, 0], n=fftsize))
-            magnitude *= args.gain / fftsize
-            line = (
-                gradient[int(np.clip(x, 0, 1) * (len(gradient) - 1))]
-                for x in magnitude[low_bin : low_bin + args.columns]
-            )
-            print(*line, sep="", end="\x1b[0m\n")
-        else:
-            print("no input")
 
     with sd.InputStream(
         device=args.device,
@@ -134,6 +181,7 @@ try:
                     )
                     break
 except KeyboardInterrupt:
+    print("-------------------------")
+    # for i in last:
+    #     print(i)
     parser.exit(1, "\nInterrupted by user")
-except Exception as e:
-    parser.exit(1, type(e).__name__ + ": " + str(e))
