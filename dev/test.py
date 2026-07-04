@@ -131,6 +131,7 @@ names = [
 try:
 
     def callback(indata, frames, time, status):
+        print("a")
         if status:
             print(status)
         if any(indata):
@@ -140,12 +141,12 @@ try:
 
             # maxofM = magnitude.index(max(magnitudes))
             # maxofM = np.where(magnitude == max(magnitudes))
-            maxofM1 = randomShi.get_index(max(magnitudes), magnitude)
-            maxofM = frequencies[int(maxofM1[0][0])]
+            # maxofM1 = randomShi.get_index(max(magnitudes), magnitude)
+            # maxofM = frequencies[int(maxofM1[0][0])]
 
-            a = randomShi.findClosest(maxofM, bins)
+            # a = randomShi.findClosest(maxofM, bins)
 
-            print(names[int(np.where(bins == a)[0][0])])
+            # print(names[int(np.where(bins == a)[0][0])])
 
             # print(set, names[int(set.index(max(set)) / 5)])
 

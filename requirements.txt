@@ -1,0 +1,6 @@
+numpy
+pygame
+argparse
+pygame_widgets
+shutil
+sounddevice
