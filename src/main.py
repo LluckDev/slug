@@ -335,7 +335,7 @@ try:
             for i in range(len(bins2)):
                 draw_line(screen, bins2[i], 400, 40, colors[min(int(sets[i]), 79)], 7)
             screen.blit(bsf)
-            print(tm.time() - first)
+            # print(tm.time() - first)
 
             pygame.display.flip()
 
