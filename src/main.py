@@ -4,6 +4,7 @@
 import argparse
 import math
 import shutil
+import time as tm
 from random import random
 
 import numpy as np
@@ -46,7 +47,7 @@ try:
 except AttributeError:
     columns = 80
 
-columns = 20000
+columns = 10000
 
 
 parser = argparse.ArgumentParser(add_help=False)
@@ -70,7 +71,7 @@ parser.add_argument(
     "--block-duration",
     type=float,
     metavar="DURATION",
-    default=50,
+    default=100,
     help="block size (default %(default)s milliseconds)",
 )
 parser.add_argument(
@@ -108,6 +109,11 @@ samplerate = sd.query_devices(args.device, "input")["default_samplerate"]
 pygame.init()
 screen = pygame.display.set_mode((900, 1000))
 screen2 = pygame.display.set_mode((900, 1000))
+bs = pygame.Surface((900, 900))
+
+bsf = pygame.Surface((900, 900), pygame.SRCALPHA)
+
+bsf.set_colorkey((0, 0, 0))
 pygame.display.set_caption("Squricles")
 screen.fill((12, 12, 20))
 gainS = slider = Slider(
@@ -259,11 +265,11 @@ def draw_guides():
         y2 = (-math.cos(i) * mukt3) + 450
         x3 = (math.sin(i) * (mult + 20)) + 450
         y3 = (-math.cos(i) * (mult + 20)) + 450
-        pygame.draw.line(screen, (99, 99, 99), (x1, y1), (x2, y2), 2)
+        pygame.draw.line(bsf, (99, 99, 99), (x1, y1), (x2, y2), 2)
         text = font.render(textRef[int(i / 30)], True, (255, 255, 255), (0, 0, 0))
         textRect = text.get_rect()
         textRect.center = (x3, y3)
-        screen.blit(text, textRect)
+        bsf.blit(text, textRect)
 
 
 def draw_line(s, t, max, change, color, width):
@@ -282,6 +288,7 @@ def draw_line(s, t, max, change, color, width):
 fMask = []
 bins = []
 gain = 0.008
+last = []
 try:
 
     def callback(indata, frames, time, status):
@@ -293,10 +300,16 @@ try:
         global bins
         global screen
         global gain
+        global bs
+        global bsf
+        global last
+        global fftsize
         if status:
             print(status)
         if any(indata):
-            magnitude = np.abs(np.fft.rfft(indata[:, 0], n=fftsize))
+            first = tm.time()
+
+            magnitude = np.abs(np.fft.rfft((indata[:, 0]), n=fftsize))
 
             # this is all the buckets
             magnitudes = np.abs(magnitude)
@@ -305,13 +318,27 @@ try:
             if type(fMask).__name__ == "list":
                 fMask = calc_real_bins()
                 bins = make_bins()
-            sets = np.extract(fMask, magnitudes)
-            sets = np.power(sets, 2) * (gain)
+                for i in range(len(bins)):
+                    draw_line(bs, bins[i], 400, 40, colors[0], 7)
+                    draw_guides()
 
-            for i in range(len(bins)):
-                draw_line(screen, bins[i], 400, 40, colors[min(int(sets[i]), 79)], 7)
-            draw_guides()
+            sets = np.extract(fMask, magnitudes)
+
+            mask2 = sets.astype(int) != 0.0
+
+            # print(mask2)
+            sets2 = np.extract(mask2, sets)
+            bins2 = np.extract(mask2, bins)
+
+            sets = np.power(sets2, 2) * (gain)
+            screen.blit(bs)
+            for i in range(len(bins2)):
+                draw_line(screen, bins2[i], 400, 40, colors[min(int(sets[i]), 79)], 7)
+            screen.blit(bsf)
+            print(tm.time() - first)
+
             pygame.display.flip()
+
             # print(bins)
 
             # create magintude via mask
